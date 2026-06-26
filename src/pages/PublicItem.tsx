@@ -13,8 +13,17 @@ interface PublicData {
     retail_price: number | null
     listed_price: number | null
     sold_price: number | null
+    retail_links: { label?: string; url: string; price?: number | null }[]
   }
   images: { url: string; caption: string | null }[]
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
 }
 
 export default function PublicItem() {
@@ -88,6 +97,26 @@ export default function PublicItem() {
               </span>
             )}
           </div>
+
+          {item.retail_links?.length > 0 && (
+            <div className="mt-4 border-t border-stone-200 pt-4">
+              <div className="mb-1.5 text-xs font-medium text-stone-400">Compare retail</div>
+              <div className="space-y-1.5">
+                {item.retail_links.map((l, i) => (
+                  <a
+                    key={i}
+                    href={l.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between gap-2 text-sm text-[var(--color-brand)]"
+                  >
+                    <span className="truncate">🔗 {l.label || hostOf(l.url)}</span>
+                    {l.price != null && <span className="shrink-0 text-stone-500">{money(l.price)}</span>}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-5 text-center text-xs text-stone-400">Shared via ResellTracker</div>
         </div>

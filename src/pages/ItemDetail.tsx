@@ -78,7 +78,7 @@ export default function ItemDetail() {
 
       <Card>
         <SectionTitle icon="🏷️">Item info</SectionTitle>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <ReadField label="Vendor">{item.vendor ?? '—'}</ReadField>
           <ReadField label="Retail price">{money(item.retail_price)}</ReadField>
           <div className="col-span-2">
@@ -104,7 +104,7 @@ export default function ItemDetail() {
 
       <Card>
         <SectionTitle icon="🚚">Sale & payout trail</SectionTitle>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <ReadField label="Channel / store">{item.channel?.name ?? '—'}</ReadField>
           <ReadField label="Sold to">{item.sold_to ?? '—'}</ReadField>
           <ReadField label="Tracking #">{item.tracking_number ?? '—'}</ReadField>

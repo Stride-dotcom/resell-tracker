@@ -120,6 +120,27 @@ function Detail({ item, onClose }: { item: PItem; onClose: () => void }) {
           ) : (
             <div className="grid h-56 place-items-center text-5xl text-stone-300">📦</div>
           )}
+          {item.images.length > 1 && (
+            <>
+              <button
+                aria-label="Previous photo"
+                onClick={() => setActive((active - 1 + item.images.length) % item.images.length)}
+                className="absolute left-2 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-2xl text-stone-700 shadow"
+              >
+                ‹
+              </button>
+              <button
+                aria-label="Next photo"
+                onClick={() => setActive((active + 1) % item.images.length)}
+                className="absolute right-2 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-2xl text-stone-700 shadow"
+              >
+                ›
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-2.5 py-0.5 text-xs text-white">
+                {active + 1} / {item.images.length}
+              </div>
+            </>
+          )}
         </div>
 
         {item.images.length > 1 && (

@@ -59,11 +59,32 @@ export default function PublicItem() {
   return (
     <div className="mx-auto max-w-md px-4 py-6">
       <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-        <div className="bg-stone-50">
+        <div className="relative bg-stone-50">
           {images[active] ? (
             <img src={images[active].url} alt="" className="mx-auto block max-h-[70vh] w-auto max-w-full" />
           ) : (
             <div className="grid h-56 place-items-center text-5xl text-stone-300">📦</div>
+          )}
+          {images.length > 1 && (
+            <>
+              <button
+                aria-label="Previous photo"
+                onClick={() => setActive((active - 1 + images.length) % images.length)}
+                className="absolute left-2 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-2xl text-stone-700 shadow"
+              >
+                ‹
+              </button>
+              <button
+                aria-label="Next photo"
+                onClick={() => setActive((active + 1) % images.length)}
+                className="absolute right-2 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-2xl text-stone-700 shadow"
+              >
+                ›
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-2.5 py-0.5 text-xs text-white">
+                {active + 1} / {images.length}
+              </div>
+            </>
           )}
         </div>
 

@@ -91,9 +91,9 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export function ReadField({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <div className="text-xs text-stone-400">{label}</div>
-      <div className="text-[15px] text-stone-800">{children}</div>
+      <div className="text-[15px] break-words text-stone-800">{children}</div>
     </div>
   )
 }

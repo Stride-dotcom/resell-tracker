@@ -11,6 +11,19 @@ export default function ItemDetail() {
   const [item, setItem] = useState<Item | null>(null)
   const [shareExpiry, setShareExpiry] = useState('never')
   const [shareCustom, setShareCustom] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  function copyListing() {
+    if (!item) return
+    const price = item.listed_price ?? item.sold_price ?? item.retail_price
+    const lines: string[] = [item.title]
+    if (price != null) lines.push(money(price))
+    if (item.description) lines.push('', item.description)
+    if (item.details) lines.push('', item.details)
+    navigator.clipboard.writeText(lines.join('\n').trim())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
+  }
   const [photos, setPhotos] = useState<{ media: Media; url: string }[]>([])
   const [docs, setDocs] = useState<{ media: Media; url: string }[]>([])
 
@@ -141,6 +154,19 @@ export default function ItemDetail() {
           </div>
         </Card>
       )}
+
+      <Card>
+        <SectionTitle icon="🛒">Post to marketplace</SectionTitle>
+        <p className="mb-2 text-sm text-stone-500">
+          Copies the title, price, and description so you can paste into a new listing. Photos are above — long-press
+          to save.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={copyListing}>Copy for OfferUp</Button>
+          <Button onClick={copyListing}>Copy for Facebook</Button>
+        </div>
+        {copied && <p className="mt-2 text-xs text-emerald-700">Copied — paste into your new listing.</p>}
+      </Card>
 
       <Card>
         <SectionTitle icon="🌐">Public sharing</SectionTitle>

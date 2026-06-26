@@ -57,6 +57,34 @@ export async function bulkDelete(ids: string[]): Promise<void> {
   if (error) throw error
 }
 
+// Ask Claude (server-side edge function) to write a marketplace description.
+export async function generateDescription(item: Partial<Item>): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('generate-description', {
+    body: {
+      item: {
+        title: item.title,
+        vendor: item.vendor,
+        details: item.details,
+        notes: item.notes,
+        retail_price: item.retail_price,
+        retail_links: item.retail_links,
+      },
+    },
+  })
+  if (error) {
+    let msg = error.message
+    try {
+      const ctx = await (error as { context?: Response }).context?.json?.()
+      if (ctx?.error) msg = ctx.error
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg)
+  }
+  if (data?.error) throw new Error(data.error)
+  return (data?.description ?? '').trim()
+}
+
 // Create a public, shareable collection of items. Returns the share token.
 export async function createCollection(
   itemIds: string[],

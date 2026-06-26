@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { createChannel, createItem, getItem, listChannels, updateItem } from '../lib/db'
+import { createChannel, createItem, generateDescription, getItem, listChannels, updateItem } from '../lib/db'
 import type { Channel, Item, ItemStatus, PaymentMethod, RetailLink } from '../lib/types'
 import { estimatePayout } from '../lib/format'
 import { Button, Card, Field, Input, Select, SectionTitle, Spinner, Textarea } from '../components/ui'
@@ -20,6 +20,20 @@ export default function ItemForm() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(!!editing)
   const [saving, setSaving] = useState(false)
+  const [aiBusy, setAiBusy] = useState(false)
+
+  async function genDescription() {
+    setAiBusy(true)
+    setError(null)
+    try {
+      const text = await generateDescription(form)
+      if (text) set('description', text)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not generate a description')
+    } finally {
+      setAiBusy(false)
+    }
+  }
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -130,9 +144,20 @@ export default function ItemForm() {
               <Input type="number" step="0.01" value={form.retail_price ?? ''} onChange={(e) => set('retail_price', num(e.target.value))} />
             </Field>
           </div>
-          <Field label="Description">
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-stone-500">Description</span>
+              <button
+                type="button"
+                onClick={genDescription}
+                disabled={aiBusy}
+                className="shrink-0 text-xs font-medium text-[var(--color-brand)] disabled:opacity-50"
+              >
+                {aiBusy ? 'Writing…' : '✨ Generate with AI'}
+              </button>
+            </div>
             <Textarea value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} />
-          </Field>
+          </div>
           <Field label="Details">
             <Textarea value={form.details ?? ''} onChange={(e) => set('details', e.target.value)} />
           </Field>

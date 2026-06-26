@@ -106,6 +106,37 @@ export async function signedUrl(path: string): Promise<string | null> {
   return data?.signedUrl ?? null
 }
 
+// First item photo per item, as a signed URL — for list thumbnails. Batched so the
+// whole inventory list costs one media query plus one signed-URL request.
+export async function itemThumbnails(itemIds: string[]): Promise<Record<string, string>> {
+  if (itemIds.length === 0) return {}
+  const { data: media, error } = await supabase
+    .from('media')
+    .select('item_id, path, sort_order, created_at')
+    .in('item_id', itemIds)
+    .eq('kind', 'item_photo')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+  if (error || !media) return {}
+
+  const pathByItem: Record<string, string> = {}
+  for (const m of media as { item_id: string; path: string }[]) {
+    if (!pathByItem[m.item_id]) pathByItem[m.item_id] = m.path
+  }
+  const paths = Object.values(pathByItem)
+  if (paths.length === 0) return {}
+
+  const { data: signed } = await supabase.storage.from('item-media').createSignedUrls(paths, 60 * 60)
+  const urlByPath: Record<string, string> = {}
+  for (const s of signed ?? []) if (s.signedUrl && s.path) urlByPath[s.path] = s.signedUrl
+
+  const out: Record<string, string> = {}
+  for (const [itemId, path] of Object.entries(pathByItem)) {
+    if (urlByPath[path]) out[itemId] = urlByPath[path]
+  }
+  return out
+}
+
 function makeId(): string {
   return crypto.getRandomValues(new Uint8Array(8)).reduce((s, b) => s + b.toString(16).padStart(2, '0'), '')
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listItems } from '../lib/db'
+import { itemThumbnails, listItems } from '../lib/db'
 import type { Item, ItemStatus } from '../lib/types'
 import { money } from '../lib/format'
 import { Spinner, StatusBadge } from '../components/ui'
@@ -15,11 +15,17 @@ const FILTERS: { key: 'all' | ItemStatus; label: string }[] = [
 
 export default function Dashboard() {
   const [items, setItems] = useState<Item[] | null>(null)
+  const [thumbs, setThumbs] = useState<Record<string, string>>({})
   const [filter, setFilter] = useState<'all' | ItemStatus>('all')
   const [q, setQ] = useState('')
 
   useEffect(() => {
-    listItems().then(setItems).catch((e) => console.error(e))
+    listItems()
+      .then((list) => {
+        setItems(list)
+        itemThumbnails(list.map((i) => i.id)).then(setThumbs).catch(() => {})
+      })
+      .catch((e) => console.error(e))
   }, [])
 
   const stats = useMemo(() => {
@@ -94,9 +100,17 @@ export default function Dashboard() {
               to={`/item/${i.id}`}
               className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white p-3 active:bg-stone-50"
             >
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-stone-100 text-xl">
-                📦
-              </div>
+              {thumbs[i.id] ? (
+                <img
+                  src={thumbs[i.id]}
+                  alt=""
+                  className="h-12 w-12 shrink-0 rounded-lg border border-stone-200 object-cover"
+                />
+              ) : (
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-stone-100 text-xl">
+                  📦
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{i.title}</div>
                 <div className="truncate text-xs text-stone-400">

@@ -262,30 +262,41 @@ function RetailLinks({ links, onChange }: { links: RetailLink[]; onChange: (l: R
   return (
     <div className="space-y-2">
       {links.map((l, i) => (
-        <div key={i} className="flex gap-2">
-          <Input
-            value={l.url}
-            onChange={(e) => update(i, { url: e.target.value })}
-            placeholder="https://…"
-            className="flex-1"
-          />
-          <Input
-            type="number"
-            step="0.01"
-            value={l.price ?? ''}
-            onChange={(e) => update(i, { price: e.target.value ? Number(e.target.value) : null })}
-            placeholder="$"
-            className="w-24"
-          />
-          <Button type="button" variant="ghost" onClick={() => onChange(links.filter((_, idx) => idx !== i))}>
-            ✕
-          </Button>
+        <div key={i} className="space-y-2 rounded-xl border border-stone-200 p-2.5">
+          <div className="flex gap-2">
+            <Input
+              type="url"
+              inputMode="url"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={l.url}
+              onChange={(e) => update(i, { url: e.target.value })}
+              placeholder="Paste a link (Wayfair, West Elm, etc.)"
+              className="flex-1"
+            />
+            <Button type="button" variant="ghost" onClick={() => onChange(links.filter((_, idx) => idx !== i))}>
+              ✕
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-stone-400">Sells for there (optional)</span>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              value={l.price ?? ''}
+              onChange={(e) => update(i, { price: e.target.value ? Number(e.target.value) : null })}
+              placeholder="$0.00"
+              className="w-28"
+            />
+          </div>
         </div>
       ))}
       <button
         type="button"
         onClick={() => onChange([...links, { url: '', price: null }])}
-        className="text-xs font-medium text-[var(--color-brand)]"
+        className="text-sm font-medium text-[var(--color-brand)]"
       >
         ＋ Add link
       </button>

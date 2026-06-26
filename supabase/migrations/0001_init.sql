@@ -80,21 +80,27 @@ create index if not exists media_item_idx on media (item_id);
 -- ---------------------------------------------------------------------------
 -- Triggers: assign inventory_no and keep updated_at fresh
 -- ---------------------------------------------------------------------------
-create or replace function set_inventory_no() returns trigger as $$
+create or replace function set_inventory_no() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
 begin
   if new.inventory_no is null then
-    new.inventory_no := 'INV-' || lpad(nextval('inventory_seq')::text, 4, '0');
+    new.inventory_no := 'INV-' || lpad(nextval('public.inventory_seq')::text, 4, '0');
   end if;
   return new;
 end;
-$$ language plpgsql;
+$$;
 
-create or replace function touch_updated_at() returns trigger as $$
+create or replace function touch_updated_at() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
 begin
   new.updated_at := now();
   return new;
 end;
-$$ language plpgsql;
+$$;
 
 drop trigger if exists trg_items_inventory_no on items;
 create trigger trg_items_inventory_no before insert on items

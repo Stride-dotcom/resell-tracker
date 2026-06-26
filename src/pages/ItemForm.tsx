@@ -20,6 +20,7 @@ export default function ItemForm() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(!!editing)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     listChannels().then(setChannels)
@@ -48,7 +49,11 @@ export default function ItemForm() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.title?.trim()) return alert('Give the item a title.')
+    if (!form.title?.trim()) {
+      setError('Give the item a title.')
+      return
+    }
+    setError(null)
     setSaving(true)
     try {
       const payload: Partial<Item> = {
@@ -80,7 +85,7 @@ export default function ItemForm() {
         navigate(`/item/${created.id}`)
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Save failed')
+      setError(err instanceof Error ? err.message : 'Save failed')
     } finally {
       setSaving(false)
     }
@@ -115,7 +120,7 @@ export default function ItemForm() {
         <SectionTitle icon="🏷️">Item info</SectionTitle>
         <div className="space-y-3">
           <Field label="Title *">
-            <Input value={form.title ?? ''} onChange={(e) => set('title', e.target.value)} placeholder="Mid-century walnut chair" />
+            <Input required value={form.title ?? ''} onChange={(e) => set('title', e.target.value)} placeholder="Mid-century walnut chair" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Vendor / brand">
@@ -240,8 +245,9 @@ export default function ItemForm() {
         <p className="px-1 text-xs text-stone-400">Save the item first, then add photos and documents.</p>
       )}
 
-      <div className="sticky bottom-16 flex gap-2 bg-[var(--color-paper)] py-2">
-        <Button type="submit" variant="primary" disabled={saving} className="flex-1">
+      <div className="sticky bottom-16 bg-[var(--color-paper)] py-2">
+        {error && <p className="mb-2 text-center text-sm text-red-600">{error}</p>}
+        <Button type="submit" variant="primary" disabled={saving} className="w-full">
           {saving ? 'Saving…' : editing ? 'Save changes' : 'Create item'}
         </Button>
       </div>

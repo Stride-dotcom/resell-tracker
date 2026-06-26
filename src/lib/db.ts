@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { makeToken } from './format'
 import type { Channel, Item, Media } from './types'
 
 // ---- items -----------------------------------------------------------------
@@ -54,6 +55,16 @@ export async function bulkDelete(ids: string[]): Promise<void> {
   if (ids.length === 0) return
   const { error } = await supabase.from('items').delete().in('id', ids)
   if (error) throw error
+}
+
+// Create a public, shareable collection of items. Returns the share token.
+export async function createCollection(itemIds: string[], name?: string): Promise<string> {
+  const token = makeToken(10)
+  const { error } = await supabase
+    .from('collections')
+    .insert({ item_ids: itemIds, share_token: token, name: name ?? null })
+  if (error) throw error
+  return token
 }
 
 // Items currently sitting at a channel and not yet paid out — the candidates for a payment.

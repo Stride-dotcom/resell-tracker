@@ -8,6 +8,7 @@ import ItemDetail from './pages/ItemDetail'
 import Channels from './pages/Channels'
 import ReceivePayment from './pages/ReceivePayment'
 import PublicItem from './pages/PublicItem'
+import PublicCollection from './pages/PublicCollection'
 import { Spinner } from './components/ui'
 
 function Protected() {
@@ -24,6 +25,7 @@ export default function App() {
         <Routes>
           {/* Public, no auth required */}
           <Route path="/p/:token" element={<PublicItem />} />
+          <Route path="/c/:token" element={<PublicCollection />} />
 
           {/* Authenticated app */}
           <Route element={<Protected />}>

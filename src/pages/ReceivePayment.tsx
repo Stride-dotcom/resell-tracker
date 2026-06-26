@@ -36,7 +36,7 @@ export default function ReceivePayment() {
     unpaidItemsAtChannel(channelId)
       .then((list) => {
         setItems(list)
-        setSelected(new Set(list.map((i) => i.id))) // default: all selected
+        setSelected(new Set()) // start empty — you pick which items this payment covers
       })
       .catch((e) => console.error(e))
   }, [channelId])
@@ -79,7 +79,7 @@ export default function ReceivePayment() {
       // refresh remaining unpaid at this channel
       const remaining = await unpaidItemsAtChannel(channelId)
       setItems(remaining)
-      setSelected(new Set(remaining.map((i) => i.id)))
+      setSelected(new Set())
       setCheckNo('')
       if (fileRef.current) fileRef.current.value = ''
     } catch (e) {

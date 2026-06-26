@@ -79,10 +79,12 @@ export default function PublicCollection() {
               )}
             </div>
             <div className="p-2.5">
-              <div className="truncate text-sm font-medium">{i.title}</div>
-              <div className="mt-0.5 flex items-center justify-between">
-                {priceOf(i) != null && <span className="text-sm">{money(priceOf(i))}</span>}
-                <span className="text-xs capitalize text-stone-400">{i.status}</span>
+              <div className="line-clamp-2 text-sm font-medium leading-snug">{i.title}</div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {priceOf(i) != null && <span className="text-sm font-medium">{money(priceOf(i))}</span>}
+                <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] capitalize text-stone-500">
+                  {i.status}
+                </span>
               </div>
             </div>
           </button>
@@ -105,19 +107,19 @@ function Detail({ item, onClose }: { item: PItem; onClose: () => void }) {
         className="my-6 w-full max-w-md overflow-hidden rounded-3xl bg-white"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative flex aspect-[4/3] items-center justify-center bg-white">
-          {item.images[active] ? (
-            <img src={item.images[active]} alt="" className="max-h-full max-w-full object-contain" />
-          ) : (
-            <div className="text-5xl text-stone-300">📦</div>
-          )}
+        <div className="relative bg-stone-50">
           <button
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-stone-600 shadow"
+            className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-stone-600 shadow"
           >
             ✕
           </button>
+          {item.images[active] ? (
+            <img src={item.images[active]} alt="" className="mx-auto block max-h-[70vh] w-auto max-w-full" />
+          ) : (
+            <div className="grid h-56 place-items-center text-5xl text-stone-300">📦</div>
+          )}
         </div>
 
         {item.images.length > 1 && (

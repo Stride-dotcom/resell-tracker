@@ -200,10 +200,10 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      <div className="mb-3 -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
         <button
           onClick={() => setFilters(new Set())}
-          className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${
+          className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[13px] ${
             filters.size === 0 ? 'bg-stone-900 text-white' : 'border border-stone-300 text-stone-600'
           }`}
         >
@@ -213,7 +213,7 @@ export default function Dashboard() {
           <button
             key={s}
             onClick={() => toggleFilter(s)}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${
+            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[13px] ${
               filters.has(s) ? 'bg-stone-900 text-white' : 'border border-stone-300 text-stone-600'
             }`}
           >
@@ -283,22 +283,30 @@ export default function Dashboard() {
           <div className="mb-2 text-xs text-stone-500">
             {selected.size} selected · payout {money(selectedPayout)}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <Button variant="primary" onClick={openShare} disabled={busy}>
               Share link
             </Button>
             <Button onClick={() => setConsignOpen(true)} disabled={busy}>
-              Send to consignment
+              Consign
             </Button>
-            <Button onClick={() => applyStatus('available')} disabled={busy}>
-              Available
-            </Button>
-            <Button onClick={() => applyStatus('sold')} disabled={busy}>
-              Sold
-            </Button>
-            <Button onClick={() => applyStatus('paid')} disabled={busy}>
-              Paid
-            </Button>
+          </div>
+          <div className="mt-2 flex gap-2">
+            <Select
+              value=""
+              disabled={busy}
+              onChange={(e) => {
+                if (e.target.value) applyStatus(e.target.value as ItemStatus)
+              }}
+              className="flex-1"
+            >
+              <option value="">Set status…</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                </option>
+              ))}
+            </Select>
             <Button variant="danger" onClick={removeSelected} disabled={busy}>
               Delete
             </Button>

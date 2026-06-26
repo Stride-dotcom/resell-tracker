@@ -58,11 +58,15 @@ export async function bulkDelete(ids: string[]): Promise<void> {
 }
 
 // Create a public, shareable collection of items. Returns the share token.
-export async function createCollection(itemIds: string[], name?: string): Promise<string> {
+export async function createCollection(
+  itemIds: string[],
+  expiresAt?: string | null,
+  name?: string,
+): Promise<string> {
   const token = makeToken(10)
   const { error } = await supabase
     .from('collections')
-    .insert({ item_ids: itemIds, share_token: token, name: name ?? null })
+    .insert({ item_ids: itemIds, share_token: token, name: name ?? null, expires_at: expiresAt ?? null })
   if (error) throw error
   return token
 }

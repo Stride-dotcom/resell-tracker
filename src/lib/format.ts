@@ -17,6 +17,19 @@ export function makeToken(len = 10): string {
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('')
 }
 
+// Turn an expiration choice into a timestamp (or null = never).
+export function computeExpiry(preset: string, customDate?: string): string | null {
+  if (preset === 'never' || !preset) return null
+  if (preset === 'custom') {
+    if (!customDate) return null
+    const d = new Date(customDate + 'T23:59:59')
+    return Number.isNaN(d.getTime()) ? null : d.toISOString()
+  }
+  const days = Number(preset)
+  if (!days) return null
+  return new Date(Date.now() + days * 86_400_000).toISOString()
+}
+
 // Net to you after a store's commission. Returns null if inputs are missing.
 export function estimatePayout(sold: number | null, commissionPct: number | null): number | null {
   if (sold === null || sold === undefined) return null

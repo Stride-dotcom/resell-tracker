@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteItem, getItem, listMedia, signedUrl, updateItem } from '../lib/db'
 import type { Item, Media } from '../lib/types'
-import { money, shortDate, makeToken } from '../lib/format'
-import { Button, Card, ReadField, SectionTitle, Spinner, StatusBadge } from '../components/ui'
+import { computeExpiry, money, shortDate, makeToken } from '../lib/format'
+import { Button, Card, Field, Input, ReadField, Select, SectionTitle, Spinner, StatusBadge } from '../components/ui'
 
 export default function ItemDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [item, setItem] = useState<Item | null>(null)
+  const [shareExpiry, setShareExpiry] = useState('never')
+  const [shareCustom, setShareCustom] = useState('')
   const [photos, setPhotos] = useState<{ media: Media; url: string }[]>([])
   const [docs, setDocs] = useState<{ media: Media; url: string }[]>([])
 
@@ -32,11 +34,15 @@ export default function ItemDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  async function toggleShare() {
+  async function toggleShare(expiresAt?: string | null) {
     if (!item) return
     const turningOn = !item.is_public
     const token = item.share_token ?? makeToken()
-    const updated = await updateItem(item.id, { is_public: turningOn, share_token: token })
+    const updated = await updateItem(item.id, {
+      is_public: turningOn,
+      share_token: token,
+      public_expires_at: turningOn ? (expiresAt ?? null) : null,
+    })
     setItem(updated)
   }
 
@@ -142,15 +148,37 @@ export default function ItemDetail() {
           <div className="space-y-2">
             <div className="rounded-lg bg-[var(--color-brand-soft)] px-3 py-2 text-sm text-[var(--color-brand)]">
               Public link is on. Buyers see photos, description, and price only.
+              {item.public_expires_at && (
+                <span className="mt-0.5 block text-xs">
+                  Expires {new Date(item.public_expires_at).toLocaleDateString()}
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <input readOnly value={shareUrl} className="flex-1 rounded-lg border border-stone-200 bg-stone-50 px-2 py-2 text-xs" />
               <Button onClick={() => navigator.clipboard.writeText(shareUrl)}>Copy</Button>
             </div>
-            <Button variant="ghost" onClick={toggleShare}>Turn off sharing</Button>
+            <Button variant="ghost" onClick={() => toggleShare()}>Turn off sharing</Button>
           </div>
         ) : (
-          <Button onClick={toggleShare}>Create public share link</Button>
+          <div className="space-y-3">
+            <Field label="Link expires">
+              <Select value={shareExpiry} onChange={(e) => setShareExpiry(e.target.value)}>
+                <option value="never">Never</option>
+                <option value="7">In 7 days</option>
+                <option value="30">In 30 days</option>
+                <option value="custom">Custom date…</option>
+              </Select>
+            </Field>
+            {shareExpiry === 'custom' && (
+              <Field label="Expiry date">
+                <Input type="date" value={shareCustom} onChange={(e) => setShareCustom(e.target.value)} />
+              </Field>
+            )}
+            <Button onClick={() => toggleShare(computeExpiry(shareExpiry, shareCustom))}>
+              Create public share link
+            </Button>
+          </div>
         )}
       </Card>
 

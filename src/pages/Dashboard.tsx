@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { bulkDelete, bulkUpdate, createCollection, itemThumbnails, listChannels, listItems } from '../lib/db'
 import type { Channel, Item, ItemStatus } from '../lib/types'
 import { STATUS_LABEL } from '../lib/types'
-import { money } from '../lib/format'
+import { computeExpiry, money } from '../lib/format'
 import { BottomSheet, Button, Field, Input, Select, Spinner, StatusBadge } from '../components/ui'
 
 const STATUSES: ItemStatus[] = ['available', 'listed', 'consigned', 'sold', 'paid']
@@ -31,7 +31,10 @@ export default function Dashboard() {
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [consignOpen, setConsignOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [shareExpiry, setShareExpiry] = useState('never')
+  const [shareCustom, setShareCustom] = useState('')
   const [busy, setBusy] = useState(false)
 
   async function reload() {
@@ -130,11 +133,19 @@ export default function Dashboard() {
     }
   }
 
-  async function shareSelected() {
+  function openShare() {
+    if (selected.size === 0) return
+    setShareUrl(null)
+    setShareExpiry('never')
+    setShareCustom('')
+    setShareOpen(true)
+  }
+
+  async function createShareLink() {
     if (selected.size === 0) return
     setBusy(true)
     try {
-      const token = await createCollection([...selected])
+      const token = await createCollection([...selected], computeExpiry(shareExpiry, shareCustom))
       setShareUrl(`${location.origin}/c/${token}`)
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Could not create share link')
@@ -273,7 +284,7 @@ export default function Dashboard() {
             {selected.size} selected · payout {money(selectedPayout)}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="primary" onClick={shareSelected} disabled={busy}>
+            <Button variant="primary" onClick={openShare} disabled={busy}>
               Share link
             </Button>
             <Button onClick={() => setConsignOpen(true)} disabled={busy}>
@@ -318,35 +329,55 @@ export default function Dashboard() {
       />
 
       <BottomSheet
-        open={!!shareUrl}
+        open={shareOpen}
         onClose={() => {
-          setShareUrl(null)
-          exitSelect()
+          setShareOpen(false)
+          if (shareUrl) exitSelect()
         }}
-        title="Share these items"
+        title={`Share ${selected.size} item${selected.size === 1 ? '' : 's'}`}
       >
-        <div className="space-y-3">
-          <p className="text-sm text-stone-500">
-            Anyone with this link sees these items as a page of cards — photos, description, and price. No login
-            needed.
-          </p>
-          <div className="flex gap-2">
-            <input
-              readOnly
-              value={shareUrl ?? ''}
-              className="flex-1 rounded-lg border border-stone-200 bg-stone-50 px-2 py-2 text-xs"
-            />
-            <Button onClick={() => shareUrl && navigator.clipboard.writeText(shareUrl)}>Copy</Button>
+        {!shareUrl ? (
+          <div className="space-y-3">
+            <p className="text-sm text-stone-500">
+              Creates a link to a page of cards — photos, description, and price. No login needed.
+            </p>
+            <Field label="Link expires">
+              <Select value={shareExpiry} onChange={(e) => setShareExpiry(e.target.value)}>
+                <option value="never">Never</option>
+                <option value="7">In 7 days</option>
+                <option value="30">In 30 days</option>
+                <option value="custom">Custom date…</option>
+              </Select>
+            </Field>
+            {shareExpiry === 'custom' && (
+              <Field label="Expiry date">
+                <Input type="date" value={shareCustom} onChange={(e) => setShareCustom(e.target.value)} />
+              </Field>
+            )}
+            <Button variant="primary" className="w-full" onClick={createShareLink} disabled={busy}>
+              {busy ? 'Creating…' : 'Create link'}
+            </Button>
           </div>
-          <a
-            href={shareUrl ?? '#'}
-            target="_blank"
-            rel="noreferrer"
-            className="block text-center text-sm text-[var(--color-brand)]"
-          >
-            Open preview ↗
-          </a>
-        </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                readOnly
+                value={shareUrl}
+                className="flex-1 rounded-lg border border-stone-200 bg-stone-50 px-2 py-2 text-xs"
+              />
+              <Button onClick={() => navigator.clipboard.writeText(shareUrl)}>Copy</Button>
+            </div>
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block text-center text-sm text-[var(--color-brand)]"
+            >
+              Open preview ↗
+            </a>
+          </div>
+        )}
       </BottomSheet>
 
       {!selectMode && (

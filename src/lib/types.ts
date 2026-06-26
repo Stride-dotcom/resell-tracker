@@ -45,6 +45,7 @@ export interface Item {
   check_number: string | null
   is_public: boolean
   share_token: string | null
+  public_expires_at: string | null
   created_at: string
   updated_at: string
   // joined

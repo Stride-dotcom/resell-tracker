@@ -1,7 +1,7 @@
 // Public, unauthenticated read of a single shared item.
 // Returns only buyer-safe fields plus signed URLs for item photos (never checks,
-// receipts, or agreements). Uses the service role, so RLS is bypassed deliberately
-// and access is gated solely by share_token + is_public.
+// receipts, or agreements). Gated by share_token + is_public, and honors an
+// optional public_expires_at. Uses the service role, so RLS is bypassed by design.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -13,25 +13,23 @@ const cors = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
-
   const token = new URL(req.url).searchParams.get('token')?.trim()
   if (!token) return json({ error: 'missing token' }, 400)
 
-  const admin = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  )
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   const { data: item } = await admin
     .from('items')
     .select(
-      'id, title, vendor, description, details, status, retail_price, retail_links, listed_price, sold_price, is_public',
+      'id, title, vendor, description, details, status, retail_price, retail_links, listed_price, sold_price, is_public, public_expires_at',
     )
     .eq('share_token', token)
     .eq('is_public', true)
     .maybeSingle()
 
   if (!item) return json({ error: 'not found' }, 404)
+  if (item.public_expires_at && new Date(item.public_expires_at).getTime() < Date.now())
+    return json({ error: 'expired' }, 410)
 
   const { data: photos } = await admin
     .from('media')
@@ -42,20 +40,14 @@ Deno.serve(async (req) => {
 
   const images: { url: string; caption: string | null }[] = []
   for (const p of photos ?? []) {
-    const { data: signed } = await admin.storage
-      .from('item-media')
-      .createSignedUrl(p.path, 60 * 60) // 1 hour
+    const { data: signed } = await admin.storage.from('item-media').createSignedUrl(p.path, 60 * 60)
     if (signed?.signedUrl) images.push({ url: signed.signedUrl, caption: p.caption })
   }
 
-  // strip the internal flag before returning
-  const { is_public: _omit, ...publicItem } = item
+  const { is_public: _o, public_expires_at: _e, ...publicItem } = item
   return json({ item: publicItem, images })
 })
 
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, 'Content-Type': 'application/json' },
-  })
+  return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }

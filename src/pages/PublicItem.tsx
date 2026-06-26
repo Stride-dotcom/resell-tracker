@@ -59,11 +59,11 @@ export default function PublicItem() {
   return (
     <div className="mx-auto max-w-md px-4 py-6">
       <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-        <div className="aspect-[16/10] bg-stone-100">
+        <div className="flex aspect-[4/3] items-center justify-center bg-white">
           {images[active] ? (
-            <img src={images[active].url} alt="" className="h-full w-full object-cover" />
+            <img src={images[active].url} alt="" className="max-h-full max-w-full object-contain" />
           ) : (
-            <div className="grid h-full place-items-center text-5xl text-stone-300">📦</div>
+            <div className="text-5xl text-stone-300">📦</div>
           )}
         </div>
 

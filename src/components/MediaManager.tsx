@@ -90,20 +90,21 @@ function KindGroup({
 
   return (
     <div>
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-xs font-medium text-stone-500">{label}</span>
+      <div className="mb-1.5 text-xs font-medium text-stone-500">
+        {label}
+        {busy && <span className="ml-2 text-[var(--color-brand)]">Uploading…</span>}
+      </div>
+      <input ref={input} type="file" accept={accept} multiple hidden onChange={onPick} />
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => input.current?.click()}
-          className="text-xs font-medium text-[var(--color-brand)]"
           disabled={busy}
+          aria-label={`Add ${label}`}
+          className="grid h-16 w-16 shrink-0 place-items-center rounded-lg border border-dashed border-stone-300 text-2xl text-stone-400 disabled:opacity-50"
         >
-          {busy ? 'Uploading…' : '＋ Add'}
+          ＋
         </button>
-        <input ref={input} type="file" accept={accept} multiple hidden onChange={onPick} />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {media.length === 0 && <span className="text-xs text-stone-300">None yet</span>}
         {media.map((m) => {
           const url = urls[m.id]
           const isImg = !m.path.toLowerCase().endsWith('.pdf')

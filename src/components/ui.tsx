@@ -82,7 +82,7 @@ export function Button({ children, onClick, type = 'button', variant = 'secondar
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <Label>{label}</Label>
       {children}
     </div>

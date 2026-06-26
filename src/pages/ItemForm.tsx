@@ -122,7 +122,7 @@ export default function ItemForm() {
           <Field label="Title *">
             <Input required value={form.title ?? ''} onChange={(e) => set('title', e.target.value)} placeholder="Mid-century walnut chair" />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Vendor / brand">
               <Input value={form.vendor ?? ''} onChange={(e) => set('vendor', e.target.value)} />
             </Field>
@@ -150,7 +150,7 @@ export default function ItemForm() {
       <Card>
         <SectionTitle icon="🚚">Status & destination</SectionTitle>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Status">
               <Select value={form.status} onChange={(e) => set('status', e.target.value as ItemStatus)}>
                 {STATUSES.map((s) => (
@@ -178,7 +178,7 @@ export default function ItemForm() {
               <Button type="button" onClick={quickAddChannel}>＋</Button>
             </div>
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Sold to (buyer name)">
               <Input value={form.sold_to ?? ''} onChange={(e) => set('sold_to', e.target.value)} placeholder="OfferUp buyer" />
             </Field>
@@ -191,7 +191,7 @@ export default function ItemForm() {
 
       <Card>
         <SectionTitle icon="💵">Sale & payout</SectionTitle>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Listed price">
             <Input type="number" step="0.01" value={form.listed_price ?? ''} onChange={(e) => set('listed_price', num(e.target.value))} />
           </Field>
@@ -214,7 +214,7 @@ export default function ItemForm() {
             Use estimated payout after {selectedChannel?.commission_pct}% commission: ${suggestedPayout}
           </button>
         )}
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Date paid">
             <Input type="date" value={form.date_paid ?? ''} onChange={(e) => set('date_paid', e.target.value || null)} />
           </Field>

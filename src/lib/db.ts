@@ -43,6 +43,31 @@ export async function deleteItem(id: string): Promise<void> {
   if (error) throw error
 }
 
+// Apply the same patch to many items at once (bulk status change, send to consignment).
+export async function bulkUpdate(ids: string[], patch: Partial<Item>): Promise<void> {
+  if (ids.length === 0) return
+  const { error } = await supabase.from('items').update(patch).in('id', ids)
+  if (error) throw error
+}
+
+export async function bulkDelete(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  const { error } = await supabase.from('items').delete().in('id', ids)
+  if (error) throw error
+}
+
+// Items currently sitting at a channel and not yet paid out — the candidates for a payment.
+export async function unpaidItemsAtChannel(channelId: string): Promise<Item[]> {
+  const { data, error } = await supabase
+    .from('items')
+    .select('*, channel:channels(*)')
+    .eq('channel_id', channelId)
+    .neq('status', 'paid')
+    .order('title')
+  if (error) throw error
+  return data as Item[]
+}
+
 // ---- channels --------------------------------------------------------------
 export async function listChannels(): Promise<Channel[]> {
   const { data, error } = await supabase.from('channels').select('*').order('name')

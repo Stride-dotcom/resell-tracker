@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import ItemForm from './pages/ItemForm'
 import ItemDetail from './pages/ItemDetail'
 import Channels from './pages/Channels'
+import ReceivePayment from './pages/ReceivePayment'
 import PublicItem from './pages/PublicItem'
 import { Spinner } from './components/ui'
 
@@ -27,6 +28,7 @@ export default function App() {
           {/* Authenticated app */}
           <Route element={<Protected />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/receive-payment" element={<ReceivePayment />} />
             <Route path="/channels" element={<Channels />} />
             <Route path="/item/new" element={<ItemForm />} />
             <Route path="/item/:id" element={<ItemDetail />} />

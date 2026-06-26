@@ -1,18 +1,14 @@
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth'
 
 const tabs = [
   { to: '/', label: 'Inventory', icon: '📦', end: true },
+  { to: '/receive-payment', label: 'Payments', icon: '💵', end: false },
   { to: '/channels', label: 'Channels', icon: '🏬', end: false },
 ]
 
 export default function Layout() {
   const { signOut } = useAuth()
-  const navigate = useNavigate()
-  const { pathname } = useLocation()
-  // The add-item FAB only belongs on the list screens, where it won't overlap
-  // a form's submit button.
-  const showFab = pathname === '/' || pathname === '/channels'
 
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col">
@@ -30,17 +26,7 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      {/* New item floating button — list screens only */}
-      {showFab && (
-        <button
-          onClick={() => navigate('/item/new')}
-          className="fixed bottom-20 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[var(--color-brand)] px-5 py-3 text-[15px] font-medium text-white shadow-lg hover:opacity-90"
-        >
-          <span className="text-lg leading-none">＋</span> Add item
-        </button>
-      )}
-
-      <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-2xl border-t border-stone-200 bg-white">
+      <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-2xl border-t border-stone-200 bg-white">
         {tabs.map((t) => (
           <NavLink
             key={t.to}

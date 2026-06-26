@@ -98,6 +98,36 @@ export function ReadField({ label, children }: { label: string; children: ReactN
   )
 }
 
+export function BottomSheet({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  title: string
+  children: ReactNode
+}) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-4 pb-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-medium">{title}</h2>
+          <button onClick={onClose} aria-label="Close" className="text-xl text-stone-400">
+            ✕
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function Spinner() {
   return (
     <div className="flex justify-center py-16 text-stone-400">

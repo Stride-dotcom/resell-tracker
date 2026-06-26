@@ -261,13 +261,13 @@ export default function Dashboard() {
                   <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-stone-100 text-xl">📦</div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{i.title}</div>
-                  <div className="truncate text-xs text-stone-400">
+                  <div className="line-clamp-2 text-sm font-medium leading-tight">{i.title}</div>
+                  <div className="mt-0.5 truncate text-xs text-stone-400">
                     {i.inventory_no}
                     {i.channel?.name ? ` · ${i.channel.name}` : i.sold_to ? ` · ${i.sold_to}` : ''}
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex shrink-0 flex-col items-end gap-1">
                   <StatusBadge status={i.status} />
                   {i.sold_price != null && <span className="text-xs text-stone-500">{money(i.sold_price)}</span>}
                 </div>

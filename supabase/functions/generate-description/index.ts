@@ -9,10 +9,11 @@ const cors = {
 }
 
 const SYSTEM =
-  'You write short, punchy listing descriptions for second-hand furniture and home goods sold on OfferUp, Facebook Marketplace, and consignment. ' +
+  'You write short, punchy resale listing descriptions for items sold on OfferUp, Facebook Marketplace, and consignment — ' +
+  'anything from furniture and home goods to electronics, tools, vehicles, and industrial or warehouse equipment. ' +
   'Goal: make a buyer want to message. Write 2-4 short sentences (or a few scannable lines). ' +
-  'Lead with the brand and what it is, then condition and a reason it is a great buy (e.g. compared to retail). ' +
-  'Be honest and concrete using only the details provided — never invent measurements, materials, flaws, or history. ' +
+  'Lead with the brand and exactly what it is, then condition and specs (e.g. hours, age, capacity, wear) and a reason it is a smart buy. ' +
+  'Be honest and concrete using only the details provided — never invent measurements, specs, hours, materials, flaws, or history. ' +
   'No emojis, no hashtags, no ALL CAPS, and do NOT state a price (the listing shows price separately). Return plain text only, no preamble.'
 
 Deno.serve(async (req) => {

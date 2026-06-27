@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listChannels, unpaidItemsAtChannel, updateItem, uploadMedia } from '../lib/db'
 import type { Channel, Item, PaymentMethod } from '../lib/types'
-import { money } from '../lib/format'
+import { estimatePayout, money } from '../lib/format'
 import { Button, Card, Field, Input, Select, SectionTitle, Spinner } from '../components/ui'
 
 const METHODS: PaymentMethod[] = ['check', 'cash', 'venmo', 'paypal', 'zelle', 'other']
 
-type Amount = { sold: string; payout: string }
+type Amount = { sold: string; payout: string; payoutTouched: boolean }
 
 export default function ReceivePayment() {
   const navigate = useNavigate()
@@ -25,6 +25,11 @@ export default function ReceivePayment() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
+
+  const commissionPct = useMemo(
+    () => channels?.find((c) => c.id === channelId)?.commission_pct ?? null,
+    [channels, channelId],
+  )
 
   useEffect(() => {
     listChannels().then(setChannels)
@@ -57,27 +62,37 @@ export default function ReceivePayment() {
     // first time an item is picked, prefill from what we already know
     setAmounts((prev) => {
       if (prev[item.id]) return prev
+      const soldVal = item.sold_price ?? item.listed_price ?? null
+      const hasPreset = item.payout != null
+      const pct = item.channel?.commission_pct ?? null
+      const payoutVal = hasPreset ? item.payout! : estimatePayout(soldVal, pct)
       return {
         ...prev,
         [item.id]: {
-          sold:
-            item.sold_price != null
-              ? String(item.sold_price)
-              : item.listed_price != null
-                ? String(item.listed_price)
-                : '',
-          payout: item.payout != null ? String(item.payout) : '',
+          sold: soldVal != null ? String(soldVal) : '',
+          payout: payoutVal != null ? String(payoutVal) : '',
+          payoutTouched: hasPreset, // a pre-set payout is treated as hand-entered
         },
       }
     })
   }
 
-  function setAmount(id: string, field: keyof Amount, raw: string) {
+  function setAmount(id: string, field: 'sold' | 'payout', raw: string) {
     const clean = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
-    setAmounts((prev) => ({
-      ...prev,
-      [id]: { ...(prev[id] ?? { sold: '', payout: '' }), [field]: clean },
-    }))
+    setAmounts((prev) => {
+      const cur = prev[id] ?? { sold: '', payout: '', payoutTouched: false }
+      if (field === 'payout') {
+        return { ...prev, [id]: { ...cur, payout: clean, payoutTouched: true } }
+      }
+      // Editing the sale price re-derives payout (sale − commission) until the
+      // user overrides payout by hand.
+      const next: Amount = { ...cur, sold: clean }
+      if (!cur.payoutTouched) {
+        const p = estimatePayout(clean === '' ? null : Number(clean), commissionPct)
+        next.payout = p != null ? String(p) : ''
+      }
+      return { ...prev, [id]: next }
+    })
   }
 
   const soldTotal = useMemo(
@@ -174,10 +189,16 @@ export default function ReceivePayment() {
                 {selected.size === items.length ? 'Clear all' : 'Select all'}
               </button>
             </div>
+            {commissionPct != null && (
+              <p className="mb-2 text-xs text-stone-400">
+                Payout auto-fills as sale price minus {commissionPct}% commission — edit either box if an item sold for
+                less.
+              </p>
+            )}
             <div className="space-y-1.5">
               {items.map((i) => {
                 const checked = selected.has(i.id)
-                const a = amounts[i.id] ?? { sold: '', payout: '' }
+                const a = amounts[i.id] ?? { sold: '', payout: '', payoutTouched: false }
                 return (
                   <div
                     key={i.id}

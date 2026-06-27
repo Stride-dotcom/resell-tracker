@@ -11,18 +11,12 @@ export default function ItemDetail() {
   const [item, setItem] = useState<Item | null>(null)
   const [shareExpiry, setShareExpiry] = useState('never')
   const [shareCustom, setShareCustom] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
 
-  function copyListing() {
-    if (!item) return
-    const price = item.listed_price ?? item.sold_price ?? item.retail_price
-    const lines: string[] = [item.title]
-    if (price != null) lines.push(money(price))
-    if (item.description) lines.push('', item.description)
-    if (item.details) lines.push('', item.details)
-    navigator.clipboard.writeText(lines.join('\n').trim())
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2500)
+  function copyField(label: string, text: string) {
+    navigator.clipboard.writeText(text)
+    setCopied(label)
+    setTimeout(() => setCopied(null), 2000)
   }
   const [photos, setPhotos] = useState<{ media: Media; url: string }[]>([])
   const [docs, setDocs] = useState<{ media: Media; url: string }[]>([])
@@ -68,6 +62,7 @@ export default function ItemDetail() {
   if (!item) return <Spinner />
 
   const shareUrl = `${location.origin}/p/${item.share_token}`
+  const marketPrice = item.listed_price ?? item.sold_price ?? item.retail_price
 
   return (
     <div className="space-y-4 pb-4">
@@ -158,14 +153,27 @@ export default function ItemDetail() {
       <Card>
         <SectionTitle icon="🛒">Post to marketplace</SectionTitle>
         <p className="mb-2 text-sm text-stone-500">
-          Copies the title, price, and description so you can paste into a new listing. Photos are above — long-press
-          to save.
+          OfferUp and Facebook have separate boxes. Copy each piece, then paste it into the matching box on the listing.
+          Photos are above — long-press to save them.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={copyListing}>Copy for OfferUp</Button>
-          <Button onClick={copyListing}>Copy for Facebook</Button>
+          <Button onClick={() => copyField('Title', item.title)}>
+            {copied === 'Title' ? 'Copied ✓' : 'Copy title'}
+          </Button>
+          {marketPrice != null && (
+            <Button onClick={() => copyField('Price', String(marketPrice))}>
+              {copied === 'Price' ? 'Copied ✓' : 'Copy price'}
+            </Button>
+          )}
+          {item.description && (
+            <Button onClick={() => copyField('Description', item.description!)}>
+              {copied === 'Description' ? 'Copied ✓' : 'Copy description'}
+            </Button>
+          )}
         </div>
-        {copied && <p className="mt-2 text-xs text-emerald-700">Copied — paste into your new listing.</p>}
+        {!item.description && (
+          <p className="mt-2 text-xs text-stone-400">Add a description (✨ Generate with AI on the Edit screen) to copy one.</p>
+        )}
       </Card>
 
       <Card>

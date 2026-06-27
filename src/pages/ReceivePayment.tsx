@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { bulkUpdate, listChannels, unpaidItemsAtChannel, uploadMedia } from '../lib/db'
+import { listChannels, unpaidItemsAtChannel, updateItem, uploadMedia } from '../lib/db'
 import type { Channel, Item, PaymentMethod } from '../lib/types'
 import { money } from '../lib/format'
 import { Button, Card, Field, Input, Select, SectionTitle, Spinner } from '../components/ui'
@@ -13,6 +13,8 @@ export default function ReceivePayment() {
   const [channelId, setChannelId] = useState('')
   const [items, setItems] = useState<Item[] | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // per-item amount paid, keyed by item id (kept as strings while editing)
+  const [amounts, setAmounts] = useState<Record<string, string>>({})
 
   const today = new Date().toISOString().slice(0, 10)
   const [date, setDate] = useState(today)
@@ -30,6 +32,7 @@ export default function ReceivePayment() {
     if (!channelId) {
       setItems(null)
       setSelected(new Set())
+      setAmounts({})
       return
     }
     setItems(null)
@@ -37,26 +40,35 @@ export default function ReceivePayment() {
       .then((list) => {
         setItems(list)
         setSelected(new Set()) // start empty — you pick which items this payment covers
+        setAmounts({})
       })
       .catch((e) => console.error(e))
   }, [channelId])
 
-  function toggle(id: string) {
+  function toggle(item: Item) {
     setSelected((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      if (next.has(item.id)) next.delete(item.id)
+      else next.add(item.id)
       return next
+    })
+    // first time an item is picked, prefill with any price we already know
+    setAmounts((prev) => {
+      if (prev[item.id] != null) return prev
+      const guess = item.payout ?? item.sold_price ?? item.listed_price
+      return { ...prev, [item.id]: guess != null ? String(guess) : '' }
     })
   }
 
-  const outstanding = useMemo(
-    () => (items ?? []).reduce((s, i) => s + (i.payout ?? 0), 0),
-    [items],
-  )
+  function setAmount(id: string, raw: string) {
+    // allow digits + one decimal point only
+    const clean = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
+    setAmounts((prev) => ({ ...prev, [id]: clean }))
+  }
+
   const selectedTotal = useMemo(
-    () => (items ?? []).filter((i) => selected.has(i.id)).reduce((s, i) => s + (i.payout ?? 0), 0),
-    [items, selected],
+    () => [...selected].reduce((s, id) => s + (Number(amounts[id]) || 0), 0),
+    [selected, amounts],
   )
 
   async function submit() {
@@ -64,12 +76,17 @@ export default function ReceivePayment() {
     setBusy(true)
     try {
       const ids = [...selected]
-      await bulkUpdate(ids, {
-        status: 'paid',
-        date_paid: date || null,
-        payment_method: method,
-        check_number: method === 'check' ? checkNo || null : null,
-      })
+      // each item can be a different amount, so update one at a time
+      for (const id of ids) {
+        const amt = Number(amounts[id])
+        await updateItem(id, {
+          status: 'paid',
+          date_paid: date || null,
+          payment_method: method,
+          check_number: method === 'check' ? checkNo || null : null,
+          ...(amt > 0 ? { sold_price: amt, payout: amt } : {}),
+        })
+      }
       const file = fileRef.current?.files?.[0]
       if (file) {
         for (const id of ids) await uploadMedia(id, 'check_photo', file)
@@ -80,6 +97,7 @@ export default function ReceivePayment() {
       const remaining = await unpaidItemsAtChannel(channelId)
       setItems(remaining)
       setSelected(new Set())
+      setAmounts({})
       setCheckNo('')
       if (fileRef.current) fileRef.current.value = ''
     } catch (e) {
@@ -139,36 +157,51 @@ export default function ReceivePayment() {
               {items.map((i) => {
                 const checked = selected.has(i.id)
                 return (
-                  <button
+                  <div
                     key={i.id}
-                    onClick={() => toggle(i.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left ${
+                    className={`flex items-center gap-2 rounded-xl border p-2.5 ${
                       checked ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)]' : 'border-stone-200'
                     }`}
                   >
-                    <span
-                      className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border text-xs ${
-                        checked ? 'border-[var(--color-brand)] bg-[var(--color-brand)] text-white' : 'border-stone-300'
-                      }`}
-                    >
-                      {checked ? '✓' : ''}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{i.title}</span>
-                      <span className="block truncate text-xs text-stone-400">
-                        {i.inventory_no} · {i.status}
+                    <button onClick={() => toggle(i)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                      <span
+                        className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border text-xs ${
+                          checked ? 'border-[var(--color-brand)] bg-[var(--color-brand)] text-white' : 'border-stone-300'
+                        }`}
+                      >
+                        {checked ? '✓' : ''}
                       </span>
-                    </span>
-                    <span className="shrink-0 text-sm">{money(i.payout)}</span>
-                  </button>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{i.title}</span>
+                        <span className="block truncate text-xs text-stone-400">
+                          {i.inventory_no} · {i.status}
+                        </span>
+                      </span>
+                    </button>
+                    {checked ? (
+                      <div className="flex shrink-0 items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1">
+                        <span className="text-sm text-stone-400">$</span>
+                        <input
+                          inputMode="decimal"
+                          value={amounts[i.id] ?? ''}
+                          onChange={(e) => setAmount(i.id, e.target.value)}
+                          placeholder="0"
+                          className="w-16 text-right text-sm outline-none"
+                          aria-label={`Amount paid for ${i.title}`}
+                        />
+                      </div>
+                    ) : (
+                      <span className="shrink-0 text-sm text-stone-400">
+                        {money(i.sold_price ?? i.listed_price)}
+                      </span>
+                    )}
+                  </div>
                 )
               })}
             </div>
             <div className="mt-3 flex items-center justify-between border-t border-stone-200 pt-3 text-sm">
-              <span className="text-stone-500">
-                {selected.size} of {items.length} selected · outstanding {money(outstanding)}
-              </span>
-              <span className="font-medium text-emerald-700">{money(selectedTotal)}</span>
+              <span className="text-stone-500">{selected.size} of {items.length} selected</span>
+              <span className="font-medium text-emerald-700">Total {money(selectedTotal)}</span>
             </div>
           </Card>
 
@@ -204,9 +237,7 @@ export default function ReceivePayment() {
 
           <div className="sticky bottom-16 bg-[var(--color-paper)] py-2">
             <Button variant="primary" className="w-full" disabled={busy || selected.size === 0} onClick={submit}>
-              {busy
-                ? 'Recording…'
-                : `Mark ${selected.size} paid · ${money(selectedTotal)}`}
+              {busy ? 'Recording…' : `Mark ${selected.size} paid · ${money(selectedTotal)}`}
             </Button>
           </div>
         </>

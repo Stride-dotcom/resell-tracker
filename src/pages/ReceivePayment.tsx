@@ -7,14 +7,16 @@ import { Button, Card, Field, Input, Select, SectionTitle, Spinner } from '../co
 
 const METHODS: PaymentMethod[] = ['check', 'cash', 'venmo', 'paypal', 'zelle', 'other']
 
+type Amount = { sold: string; payout: string }
+
 export default function ReceivePayment() {
   const navigate = useNavigate()
   const [channels, setChannels] = useState<Channel[] | null>(null)
   const [channelId, setChannelId] = useState('')
   const [items, setItems] = useState<Item[] | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  // per-item amount paid, keyed by item id (kept as strings while editing)
-  const [amounts, setAmounts] = useState<Record<string, string>>({})
+  // per-item sold price + payout, keyed by item id (kept as strings while editing)
+  const [amounts, setAmounts] = useState<Record<string, Amount>>({})
 
   const today = new Date().toISOString().slice(0, 10)
   const [date, setDate] = useState(today)
@@ -52,22 +54,38 @@ export default function ReceivePayment() {
       else next.add(item.id)
       return next
     })
-    // first time an item is picked, prefill with any price we already know
+    // first time an item is picked, prefill from what we already know
     setAmounts((prev) => {
-      if (prev[item.id] != null) return prev
-      const guess = item.payout ?? item.sold_price ?? item.listed_price
-      return { ...prev, [item.id]: guess != null ? String(guess) : '' }
+      if (prev[item.id]) return prev
+      return {
+        ...prev,
+        [item.id]: {
+          sold:
+            item.sold_price != null
+              ? String(item.sold_price)
+              : item.listed_price != null
+                ? String(item.listed_price)
+                : '',
+          payout: item.payout != null ? String(item.payout) : '',
+        },
+      }
     })
   }
 
-  function setAmount(id: string, raw: string) {
-    // allow digits + one decimal point only
+  function setAmount(id: string, field: keyof Amount, raw: string) {
     const clean = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
-    setAmounts((prev) => ({ ...prev, [id]: clean }))
+    setAmounts((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? { sold: '', payout: '' }), [field]: clean },
+    }))
   }
 
-  const selectedTotal = useMemo(
-    () => [...selected].reduce((s, id) => s + (Number(amounts[id]) || 0), 0),
+  const soldTotal = useMemo(
+    () => [...selected].reduce((s, id) => s + (Number(amounts[id]?.sold) || 0), 0),
+    [selected, amounts],
+  )
+  const payoutTotal = useMemo(
+    () => [...selected].reduce((s, id) => s + (Number(amounts[id]?.payout) || 0), 0),
     [selected, amounts],
   )
 
@@ -78,13 +96,16 @@ export default function ReceivePayment() {
       const ids = [...selected]
       // each item can be a different amount, so update one at a time
       for (const id of ids) {
-        const amt = Number(amounts[id])
+        const a = amounts[id] ?? { sold: '', payout: '' }
+        const sold = Number(a.sold)
+        const payout = Number(a.payout)
         await updateItem(id, {
           status: 'paid',
           date_paid: date || null,
           payment_method: method,
           check_number: method === 'check' ? checkNo || null : null,
-          ...(amt > 0 ? { sold_price: amt, payout: amt } : {}),
+          ...(sold > 0 ? { sold_price: sold } : {}),
+          ...(payout > 0 ? { payout } : {}),
         })
       }
       const file = fileRef.current?.files?.[0]
@@ -92,7 +113,7 @@ export default function ReceivePayment() {
         for (const id of ids) await uploadMedia(id, 'check_photo', file)
       }
       const channelName = channels?.find((c) => c.id === channelId)?.name ?? 'channel'
-      setDone(`Recorded ${money(selectedTotal)} from ${channelName} across ${ids.length} item(s).`)
+      setDone(`Recorded ${money(payoutTotal)} from ${channelName} across ${ids.length} item(s).`)
       // refresh remaining unpaid at this channel
       const remaining = await unpaidItemsAtChannel(channelId)
       setItems(remaining)
@@ -156,14 +177,15 @@ export default function ReceivePayment() {
             <div className="space-y-1.5">
               {items.map((i) => {
                 const checked = selected.has(i.id)
+                const a = amounts[i.id] ?? { sold: '', payout: '' }
                 return (
                   <div
                     key={i.id}
-                    className={`flex items-center gap-2 rounded-xl border p-2.5 ${
+                    className={`rounded-xl border p-2.5 ${
                       checked ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)]' : 'border-stone-200'
                     }`}
                   >
-                    <button onClick={() => toggle(i)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <button onClick={() => toggle(i)} className="flex w-full items-center gap-3 text-left">
                       <span
                         className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border text-xs ${
                           checked ? 'border-[var(--color-brand)] bg-[var(--color-brand)] text-white' : 'border-stone-300'
@@ -177,31 +199,56 @@ export default function ReceivePayment() {
                           {i.inventory_no} · {i.status}
                         </span>
                       </span>
+                      {!checked && (
+                        <span className="shrink-0 text-sm text-stone-400">{money(i.sold_price ?? i.listed_price)}</span>
+                      )}
                     </button>
-                    {checked ? (
-                      <div className="flex shrink-0 items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1">
-                        <span className="text-sm text-stone-400">$</span>
-                        <input
-                          inputMode="decimal"
-                          value={amounts[i.id] ?? ''}
-                          onChange={(e) => setAmount(i.id, e.target.value)}
-                          placeholder="0"
-                          className="w-16 text-right text-sm outline-none"
-                          aria-label={`Amount paid for ${i.title}`}
-                        />
+
+                    {checked && (
+                      <div className="mt-2 flex gap-2 pl-8">
+                        <label className="flex-1">
+                          <span className="mb-0.5 block text-[11px] font-medium text-stone-500">Sold for</span>
+                          <span className="flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1.5">
+                            <span className="text-sm text-stone-400">$</span>
+                            <input
+                              inputMode="decimal"
+                              value={a.sold}
+                              onChange={(e) => setAmount(i.id, 'sold', e.target.value)}
+                              placeholder="0"
+                              className="w-full text-sm outline-none"
+                              aria-label={`Sold price for ${i.title}`}
+                            />
+                          </span>
+                        </label>
+                        <label className="flex-1">
+                          <span className="mb-0.5 block text-[11px] font-medium text-stone-500">You got</span>
+                          <span className="flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1.5">
+                            <span className="text-sm text-stone-400">$</span>
+                            <input
+                              inputMode="decimal"
+                              value={a.payout}
+                              onChange={(e) => setAmount(i.id, 'payout', e.target.value)}
+                              placeholder="0"
+                              className="w-full text-sm outline-none"
+                              aria-label={`Payout for ${i.title}`}
+                            />
+                          </span>
+                        </label>
                       </div>
-                    ) : (
-                      <span className="shrink-0 text-sm text-stone-400">
-                        {money(i.sold_price ?? i.listed_price)}
-                      </span>
                     )}
                   </div>
                 )
               })}
             </div>
-            <div className="mt-3 flex items-center justify-between border-t border-stone-200 pt-3 text-sm">
-              <span className="text-stone-500">{selected.size} of {items.length} selected</span>
-              <span className="font-medium text-emerald-700">Total {money(selectedTotal)}</span>
+            <div className="mt-3 space-y-1 border-t border-stone-200 pt-3 text-sm">
+              <div className="flex items-center justify-between text-stone-500">
+                <span>{selected.size} of {items.length} selected</span>
+                <span>Sold {money(soldTotal)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-stone-500">Paid to you</span>
+                <span className="font-medium text-emerald-700">{money(payoutTotal)}</span>
+              </div>
             </div>
           </Card>
 
@@ -237,7 +284,7 @@ export default function ReceivePayment() {
 
           <div className="sticky bottom-16 bg-[var(--color-paper)] py-2">
             <Button variant="primary" className="w-full" disabled={busy || selected.size === 0} onClick={submit}>
-              {busy ? 'Recording…' : `Mark ${selected.size} paid · ${money(selectedTotal)}`}
+              {busy ? 'Recording…' : `Mark ${selected.size} paid · ${money(payoutTotal)}`}
             </Button>
           </div>
         </>

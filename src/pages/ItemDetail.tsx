@@ -18,6 +18,45 @@ export default function ItemDetail() {
     setCopied(label)
     setTimeout(() => setCopied(null), 2000)
   }
+
+  const [photoBusy, setPhotoBusy] = useState(false)
+
+  // Pull every item photo into one share/download action. On phones this opens the
+  // native share sheet (Save N Images to camera roll, or send straight to OfferUp);
+  // on desktop it falls back to downloading each file.
+  async function savePhotos() {
+    if (photos.length === 0) return
+    setPhotoBusy(true)
+    try {
+      const files = await Promise.all(
+        photos.map(async (p, i) => {
+          const res = await fetch(p.url)
+          const blob = await res.blob()
+          const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')
+          return new File([blob], `${item?.inventory_no ?? 'item'}-${i + 1}.${ext}`, { type: blob.type })
+        }),
+      )
+      const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean }
+      if (nav.canShare && nav.canShare({ files })) {
+        await navigator.share({ files, title: item?.title })
+      } else {
+        for (const f of files) {
+          const a = document.createElement('a')
+          a.href = URL.createObjectURL(f)
+          a.download = f.name
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+        }
+      }
+    } catch (e) {
+      // AbortError = user dismissed the share sheet; ignore. Anything else, surface it.
+      if (e instanceof Error && e.name !== 'AbortError') alert('Could not save photos: ' + e.message)
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
   const [photos, setPhotos] = useState<{ media: Media; url: string }[]>([])
   const [docs, setDocs] = useState<{ media: Media; url: string }[]>([])
 
@@ -153,10 +192,15 @@ export default function ItemDetail() {
       <Card>
         <SectionTitle icon="🛒">Post to marketplace</SectionTitle>
         <p className="mb-2 text-sm text-stone-500">
-          OfferUp and Facebook have separate boxes. Copy each piece, then paste it into the matching box on the listing.
-          Photos are above — long-press to save them.
+          OfferUp and Facebook have separate boxes. Save the photos, then copy each piece and paste it into the matching
+          box on the listing.
         </p>
         <div className="flex flex-wrap gap-2">
+          {photos.length > 0 && (
+            <Button variant="primary" onClick={savePhotos} disabled={photoBusy}>
+              {photoBusy ? 'Preparing…' : `Save all ${photos.length} photo${photos.length === 1 ? '' : 's'}`}
+            </Button>
+          )}
           <Button onClick={() => copyField('Title', item.title)}>
             {copied === 'Title' ? 'Copied ✓' : 'Copy title'}
           </Button>

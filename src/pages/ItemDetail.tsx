@@ -195,25 +195,31 @@ export default function ItemDetail() {
           OfferUp and Facebook have separate boxes. Save the photos, then copy each piece and paste it into the matching
           box on the listing.
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-2">
           {photos.length > 0 && (
-            <Button variant="primary" onClick={savePhotos} disabled={photoBusy}>
+            <Button variant="primary" className="w-full" onClick={savePhotos} disabled={photoBusy}>
               {photoBusy ? 'Preparing…' : `Save all ${photos.length} photo${photos.length === 1 ? '' : 's'}`}
             </Button>
           )}
-          <Button onClick={() => copyField('Title', item.title)}>
-            {copied === 'Title' ? 'Copied ✓' : 'Copy title'}
-          </Button>
-          {marketPrice != null && (
-            <Button onClick={() => copyField('Price', String(marketPrice))}>
+          <div className="grid grid-cols-2 gap-2">
+            <Button className="w-full" onClick={() => copyField('Title', item.title)}>
+              {copied === 'Title' ? 'Copied ✓' : 'Copy title'}
+            </Button>
+            <Button
+              className="w-full"
+              disabled={marketPrice == null}
+              onClick={() => marketPrice != null && copyField('Price', String(marketPrice))}
+            >
               {copied === 'Price' ? 'Copied ✓' : 'Copy price'}
             </Button>
-          )}
-          {item.description && (
-            <Button onClick={() => copyField('Description', item.description!)}>
-              {copied === 'Description' ? 'Copied ✓' : 'Copy description'}
-            </Button>
-          )}
+          </div>
+          <Button
+            className="w-full"
+            disabled={!item.description}
+            onClick={() => item.description && copyField('Description', item.description)}
+          >
+            {copied === 'Description' ? 'Copied ✓' : 'Copy description'}
+          </Button>
         </div>
         {!item.description && (
           <p className="mt-2 text-xs text-stone-400">Add a description (✨ Generate with AI on the Edit screen) to copy one.</p>
